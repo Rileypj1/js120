@@ -96,8 +96,8 @@ function TTTGame() {
   this.board = new Board();
   this.human = new Human();
   this.computer = new Computer();
-
-  this.POSSIBLE_WINNING_ROWS = [
+  this.playOrder = [this.humanMoves.bind(this), this.computerMoves.bind(this)]
+  TTTGame.POSSIBLE_WINNING_ROWS = [
     [ "1", "2", "3" ],            // top row of board
     [ "4", "5", "6" ],            // center row of board
     [ "7", "8", "9" ],            // bottom row of board
@@ -114,19 +114,10 @@ TTTGame.prototype.play = function() {
   let playAgain;
   this.displayWelcomeMessage();
   let matchWinner = 0;
+
   while(true) {
     this.board.display();
-    while (true) {
-
-      this.humanMoves();
-      if (this.gameOver()) break;
-      
-
-      this.computerMoves();
-      if (this.gameOver()) break;
-
-      this.board.displayWithClear();
-    }
+    this.playGame();
     this.updateScore();
     if (this.matchOver()) {
       matchWinner = this.matchWinner();
@@ -138,13 +129,33 @@ TTTGame.prototype.play = function() {
       this.displayGoodbyeMessage();
       break;
     }
-    if (!playAgain) break;
     this.resetBoard();
+    this.switchWhoGoesFirst();
     console.clear();
   
 
   }
   this.displayMatchWinner(matchWinner);
+}
+
+TTTGame.prototype.playGame = function() {
+  
+  while (true) {
+
+    this.playOrder[0]();
+    if (this.gameOver()) break;
+    
+    this.board.displayWithClear();
+    
+    this.playOrder[1]();
+    if (this.gameOver()) break;
+
+    this.board.displayWithClear();
+  }
+}
+
+TTTGame.prototype.switchWhoGoesFirst = function() {
+  this.playOrder.reverse();
 }
 
 TTTGame.prototype.playAgain = function() {
@@ -230,7 +241,7 @@ TTTGame.prototype.computerMoves = function() {
   while (!choice && counter <= 2) {
     let winningRowIdx = this.findRowAboutToWin(currentPlayer);
     if (winningRowIdx >= 0) {
-      let emptySpaceFromWinningRow = this.findWinningSquare(this.POSSIBLE_WINNING_ROWS[winningRowIdx])
+      let emptySpaceFromWinningRow = this.findWinningSquare(TTTGame.POSSIBLE_WINNING_ROWS[winningRowIdx])
       if (emptySpaceFromWinningRow) {
         choice = emptySpaceFromWinningRow;
       }
@@ -270,7 +281,7 @@ TTTGame.prototype.randomChoice = function(choice) {
 }
 
 TTTGame.prototype.isWinner = function(player) {
-  return this.POSSIBLE_WINNING_ROWS.some(row => {
+  return TTTGame.POSSIBLE_WINNING_ROWS.some(row => {
     return this.board.countMarkersFor(player, row) === 3
   });
 }
@@ -293,7 +304,7 @@ TTTGame.prototype.displayMatchWinner = function(winner) {
 }
 
 TTTGame.prototype.findRowAboutToWin = function(player) {
-  return this.POSSIBLE_WINNING_ROWS.findIndex(row => {
+  return TTTGame.POSSIBLE_WINNING_ROWS.findIndex(row => {
       return (this.board.countMarkersFor(player, row) === 2) && 
             (this.findWinningSquare(row) !== undefined)
   });
