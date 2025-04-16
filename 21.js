@@ -1,4 +1,7 @@
 const readline = require("readline-sync");
+const MAX_POINTS = 21;
+const ACE_HIGH = 11;
+const ACE_LOW = 1;
 class Card {
   constructor() {
 
@@ -40,22 +43,39 @@ class Participant {
   }
 
   isBusted() {
-    return this.points > 21
+    return this.getPointTotal > MAX_POINTS
   }
 
   getPointTotal() {
-    /*
-    1. need to convert face cards (not ace) to points (each 10);
-    2. need to check for aces
-      if there is an ace
-      get current point total aside from ace(s)
-        get sum of aces = multiply 11 * # of aces
-          if current point total + sum of aces < 21: set all aces to 11
-          if 1 + 11 + current point total < 21: set first ace to 1, next to 11
-          we will have to try every combination of # of aces # of aces that have 1 vs 11
-
-    */
+   const faces = ['j','q','k']
+   let allCardsToPoints = this.cards.map(card => {
+    if (parseInt(card)) {
+      return parseInt(card);
+    } else if (faces.includes(card[0])) {
+      return 10;
+    } else return card;
+   })
+   allCardsToPoints = this.assignAcesPoints(allCardsToPoints);
+   console.log(allCardsToPoints);
+   return allCardsToPoints.reduce((acc, point) => point + acc);
   }
+// need to account for situations with multiple aces that need to be assigned 1
+// current approach will sometimes assign at least one ace an 11 since it's comparing the current total and the current ace
+// in isolation from other aces in hand
+  assignAcesPoints(arr) {
+    let acesTotal = arr.filter((card) => typeof card === 'string').length;
+    for (let i = 0; i < acesTotal; i += 1) {
+      let currentTotal = arr.filter((card) => typeof card === 'number').reduce((acc, point) => point + acc);
+      let aceIdx = arr.findIndex((card) => typeof card === 'string');
+      if (currentTotal + ACE_HIGH < MAX_POINTS) {
+        arr[aceIdx] = ACE_HIGH;
+      } else {
+        arr[aceIdx] = ACE_LOW;
+      }
+    }
+    return arr;
+  }
+
 }
 
 class Player extends Participant {
@@ -64,7 +84,7 @@ class Player extends Participant {
   }
 
   hitOrStay() {
-    let question = readline.question('Are you going to hit or stay (h or s)? ');
+    let question = readline.question('\nAre you going to hit or stay (h or s)? ');
     while (!['h','s','hit','stay'].includes(question.trim())) {
       question = readline.question('Invalid response. Hit or stay (h or s)? ');
     }
@@ -74,10 +94,8 @@ class Player extends Participant {
   score() {
 
   }
-
   displayCards() {
-    let cards = this.getCards.bind(this);
-    console.log('\nHere are your cards:\n==> ' + this.joinAnd(cards()));
+    console.log('\nHere are your cards:\n==> ' + this.joinAnd(this.cards));
   }
 
   getCards() {
@@ -113,7 +131,9 @@ class Dealer extends Participant {
 
   hide() {}
 
-  reveal() {}
+  displayCards() {
+    console.log(`Dealer's cards are:\n==> ${this.cards[0]} (and hidden card(s)).`);
+  }
 
 }
 
@@ -148,14 +168,15 @@ class TwentyOne {
   showCards() {
     this.player.displayCards();
     console.log("");
-    console.log(`Dealer's cards are:\n==> ${this.dealer.cards[0]} (and hidden card).`);
+    this.dealer.displayCards();
   }
 
   playerTurn() {
+    // this while loop isn't breaking when it should -- take out 2nd condition and move within body
     while(!this.player.isBusted() && ['h','hit'].includes(this.player.hitOrStay())) {
       let nextCard = this.deck.deck.shift();
       this.player.cards.push(nextCard);
-      this.player.displayCards()
+      this.showCards();
     }
   }
   dealerTurn() {
@@ -179,4 +200,3 @@ class TwentyOne {
 
 let game = new TwentyOne();
 game.start();
-
