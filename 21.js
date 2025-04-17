@@ -43,7 +43,7 @@ class Participant {
   }
 
   isBusted() {
-    return this.getPointTotal > MAX_POINTS
+    return this.getPointTotal() > MAX_POINTS
   }
 
   getPointTotal() {
@@ -56,12 +56,8 @@ class Participant {
     } else return card;
    })
    allCardsToPoints = this.assignAcesPoints(allCardsToPoints);
-   console.log(allCardsToPoints);
    return allCardsToPoints.reduce((acc, point) => point + acc);
   }
-// need to account for situations with multiple aces that need to be assigned 1
-// current approach will sometimes assign at least one ace an 11 since it's comparing the current total and the current ace
-// in isolation from other aces in hand
   assignAcesPoints(arr) {
     let acesTotal = arr.filter((card) => typeof card === 'string').length;
     for (let i = 0; i < acesTotal; i += 1) {
@@ -74,6 +70,20 @@ class Participant {
       }
     }
     return arr;
+  }
+  joinAnd(arr, delimiter = ',', finalWord = 'and') {
+    let str = '';
+    arr.forEach((num, idx) => {
+      if (idx === arr.length - 2) {
+        str += num + ' ' + finalWord + ' ';
+      } else if (idx === arr.length - 1) {
+        str += num;
+      }
+      else {
+        str += num + delimiter + ' ';
+      }
+    })
+    return str;
   }
 
 }
@@ -102,30 +112,22 @@ class Player extends Participant {
     return this.cards;
   }
 
-  joinAnd(arr, delimiter = ',', finalWord = 'and') {
-    let str = '';
-    arr.forEach((num, idx) => {
-      if (idx === arr.length - 2) {
-        str += num + ' ' + finalWord + ' ';
-      } else if (idx === arr.length - 1) {
-        str += num;
-      }
-      else {
-        str += num + delimiter + ' ';
-      }
-    })
-    return str;
-  }
 }
 
 class Dealer extends Participant {
   constructor() {
     super();
+    this.maxHitPoints = 17;
   }
 
-  hit() {}
-
-  stay() {}
+  hitOrStay() {
+    let currentPoints = this.getPointTotal();
+    if (currentPoints < this.maxHitPoints) {
+      return 'h'
+    } else {
+      return 's'
+    }
+  }
 
   score() {}
 
@@ -135,6 +137,9 @@ class Dealer extends Participant {
     console.log(`Dealer's cards are:\n==> ${this.cards[0]} (and hidden card(s)).`);
   }
 
+  displayAllCards() {
+    console.log(`Dealer's cards are:\n==> ${this.joinAnd(this.cards)}.`);
+  }
 }
 
 class TwentyOne {
@@ -149,8 +154,8 @@ class TwentyOne {
     this.displayWelcomeMessage();
     this.dealCards();
     this.showCards();
-    this.playerTurn();
-    this.dealerTurn();
+    let playerTurn = this.playerTurn();
+    playerTurn === 'busted' ? null : this.dealerTurn();
     this.displayResult();
     this.displayGoodbyeMessage();
   }
@@ -173,20 +178,57 @@ class TwentyOne {
 
   playerTurn() {
     // this while loop isn't breaking when it should -- take out 2nd condition and move within body
-    while(!this.player.isBusted() && ['h','hit'].includes(this.player.hitOrStay())) {
+    while(!this.player.isBusted()) {
+      let hitOrStay = this.player.hitOrStay();
+      if (['s','stay'].includes(hitOrStay)) {
+        break;
+      }
       let nextCard = this.deck.deck.shift();
       this.player.cards.push(nextCard);
+      this.player.points = this.player.getPointTotal();
       this.showCards();
     }
+    if (this.player.isBusted()) {
+      console.log(`\nBusted! You have ${this.player.points} and went over ${MAX_POINTS}.`);
+      return 'busted';
+    } else {
+      console.log(`You chose to stay. Dealer's turn!`);
+      return 'stayed';
+    }
+    
   }
   dealerTurn() {
     while(!this.dealer.isBusted()) {
-
+      this.dealer.displayAllCards();
+      let hitOrStay = this.dealer.hitOrStay();
+      if (['s','stay'].includes(hitOrStay)) {
+        break;
+      }
+      console.log('Dealer chose hit!')
+      let nextCard = this.deck.deck.shift();
+      this.dealer.cards.push(nextCard);
+      this.dealer.points = this.dealer.getPointTotal();
+    }
+    if (this.dealer.isBusted()) {
+      console.log(`Busted! Dealer has ${this.dealer.points} and went over ${MAX_POINTS}.`);
+      return 'busted';
+    } else {
+      console.log(`Dealer chose to stay.`);
+      return 'stayed';
     }
   }
 
   displayResult() {
-
+    this.player.displayCards();
+    this.dealer.displayAllCards();
+    console.log("");
+    if ((this.dealer.isBusted() || (this.player.points > this.dealer.points)) && !this.player.isBusted()) {
+      console.log('*'.repeat(5)  + ' You won! ' + '*'.repeat(5));
+    } else if ((this.player.isBusted() || this.dealer.points > this.player.points) && !this.dealer.isBusted()) {
+      console.log('*'.repeat(5) + ' Dealer won! ' + '*'.repeat(5));
+    } else {
+      console.log('It\'s a tie!');
+    }
   }
 
   displayWelcomeMessage() {
