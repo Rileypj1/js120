@@ -63,7 +63,7 @@ class Participant {
     for (let i = 0; i < acesTotal; i += 1) {
       let currentTotal = arr.filter((card) => typeof card === 'number').reduce((acc, point) => point + acc);
       let aceIdx = arr.findIndex((card) => typeof card === 'string');
-      if (currentTotal + ACE_HIGH < MAX_POINTS) {
+      if (currentTotal + ACE_HIGH <= MAX_POINTS) {
         arr[aceIdx] = ACE_HIGH;
       } else {
         arr[aceIdx] = ACE_LOW;
@@ -156,6 +156,7 @@ class TwentyOne {
     this.showCards();
     let playerTurn = this.playerTurn();
     playerTurn === 'busted' ? null : this.dealerTurn();
+    this.updateFinalPoints();
     this.displayResult();
     this.displayGoodbyeMessage();
   }
@@ -177,7 +178,6 @@ class TwentyOne {
   }
 
   playerTurn() {
-    // this while loop isn't breaking when it should -- take out 2nd condition and move within body
     while(!this.player.isBusted()) {
       let hitOrStay = this.player.hitOrStay();
       if (['s','stay'].includes(hitOrStay)) {
@@ -196,6 +196,10 @@ class TwentyOne {
       return 'stayed';
     }
     
+  }
+  updateFinalPoints() {
+    this.player.points = this.player.getPointTotal();
+    this.dealer.points = this.dealer.getPointTotal();
   }
   dealerTurn() {
     while(!this.dealer.isBusted()) {
@@ -221,12 +225,22 @@ class TwentyOne {
   displayResult() {
     this.player.displayCards();
     this.dealer.displayAllCards();
+    function displayWinner(player) {
+      console.log('*'.repeat(5)  + ` ${player} won! ` + '*'.repeat(5));
+    }
     console.log("");
-    if ((this.dealer.isBusted() || (this.player.points > this.dealer.points)) && !this.player.isBusted()) {
-      console.log('*'.repeat(5)  + ' You won! ' + '*'.repeat(5));
-    } else if ((this.player.isBusted() || this.dealer.points > this.player.points) && !this.dealer.isBusted()) {
-      console.log('*'.repeat(5) + ' Dealer won! ' + '*'.repeat(5));
+    console.log(this.player.points);
+    console.log(this.dealer.points);
+    if (this.dealer.isBusted()) {
+      displayWinner('You');
+    } else if (this.player.isBusted()) {
+      displayWinner('Dealer');
+    } else if (this.player.points > this.dealer.points) {
+      displayWinner('You');
+    } else if (this.dealer.points > this.player.points) {
+      displayWinner('Dealer');
     } else {
+
       console.log('It\'s a tie!');
     }
   }
